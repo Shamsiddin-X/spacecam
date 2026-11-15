@@ -1,0 +1,16 @@
+{
+  "name": "spacecam",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Explore the infrared sky of NASA SPHEREx through time.",
+  "license": "MIT",
+  "author": "Shamsiddin Kadirov",
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "npm run check && node --test tests/*.test.mjs"
+  }
+}

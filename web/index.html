@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SpaceCam · the infrared sky of SPHEREx through time</title>
+  <meta name="description" content="SpaceCam: the whole sky from NASA SPHEREx and 40 years of archives. Pick any spot, compare epochs, find what moves." />
+  <meta name="theme-color" content="#020306" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="css/style.css?v=20261115-loader" />
+  <script src="js/config.js"></script>
+</head>
+<body class="loading">
+  <section id="startup" class="startup" aria-labelledby="startup-title">
+    <div class="startup-card">
+      <div class="startup-orbit" aria-hidden="true"><i></i></div>
+      <span class="k">SpaceCam</span>
+      <h1 id="startup-title">Preparing your sky</h1>
+      <p id="startup-message" role="status" aria-live="polite">Loading Earth textures and the infrared sky map…</p>
+      <progress id="startup-progress" max="3" value="0" aria-label="Scene assets loaded"></progress>
+      <ul class="startup-assets">
+        <li data-asset="day"><span>Earth · daylight</span><b>Loading…</b></li>
+        <li data-asset="night"><span>Earth · night lights</span><b>Loading…</b></li>
+        <li data-asset="sky"><span>Infrared sky map</span><b>Loading…</b></li>
+      </ul>
+      <div id="startup-actions" class="startup-actions" hidden>
+        <button id="startup-retry" class="btn">Retry loading</button>
+        <button id="startup-continue" class="tb">Continue with available images</button>
+      </div>
+    </div>
+  </section>
+  <div id="app" inert aria-busy="true">
+  <canvas id="gl" aria-label="Earth and the celestial sphere"></canvas>
+  <canvas id="ov" aria-hidden="true"></canvas>
+
+  <header id="bar">
+    <a id="logo" class="logo" href="#" aria-label="SpaceCam, home"><i></i>Space<b>Cam</b></a>
+    <div class="seg-s views" id="views" role="tablist">
+      <button data-v="earth" class="on" role="tab">Earth</button>
+      <button data-v="sky" role="tab">Sky</button>
+    </div>
+    <form id="search" class="search" autocomplete="off" role="search">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+      <input id="q" placeholder="Object, star, sector or coordinates" aria-label="Search" />
+      <kbd>/</kbd>
+      <div id="sugg" class="sugg" hidden></div>
+    </form>
+    <nav class="tools">
+      <div class="dd" id="dd-img">
+        <button class="dd-b">Image <b id="img-name">SPHEREx DR1</b></button>
+        <div class="dd-p dd-wide">
+          <div id="surveys" class="list"></div>
+          <div class="spectrum" id="spectrum">
+            <div class="sp-head mono"><span>Wavelength</span><b id="sp-val">0.753 µm</b><em id="sp-note"></em></div>
+            <div class="sp-bar" id="sp-bar"><i id="sp-knob"></i></div>
+            <div class="sp-scale mono"><span>0.75</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5 µm</span></div>
+          </div>
+          <div class="tone mono">
+            <label>Brightness <input type="range" id="gain" min="0.4" max="2.5" step="0.05" value="1" /></label>
+            <label>Contrast <input type="range" id="gamma" min="0.4" max="2" step="0.05" value="1" /></label>
+          </div>
+        </div>
+      </div>
+      <div class="dd" id="dd-layers">
+        <button class="dd-b">Layers</button>
+        <div class="dd-p">
+          <label><input type="checkbox" id="t-sky" checked /> Sky around Earth</label>
+          <label><input type="checkbox" id="t-sectors" checked /> Sectors A01–F12</label>
+          <label><input type="checkbox" id="t-grid" checked /> Grid, equator, ecliptic</label>
+          <label><input type="checkbox" id="t-orbit" checked /> SPHEREx orbit</label>
+          <label><input type="checkbox" id="t-cover" checked /> Sky already imaged by SPHEREx</label>
+          <label><input type="checkbox" id="t-labels" checked /> Object labels</label>
+        </div>
+      </div>
+      <div class="dd" id="dd-mission">
+        <button class="dd-b">Mission <b id="m-short">—</b></button>
+        <div class="dd-p dd-wide">
+          <div class="m-row"><button id="play" class="play" aria-label="Play the mission"><i></i></button><span class="mono"><b id="h-date">—</b> · <span id="h-survey"></span></span></div>
+          <div class="ruler"><div class="ruler-surveys" id="ruler-surveys"></div><input type="range" id="slider" min="0" max="100" step="1" aria-label="Mission date" /><div class="ruler-ticks mono" id="ruler-ticks"></div></div>
+          <p class="mono small muted" id="h-cover"></p>
+        </div>
+      </div>
+      <button class="tb" id="open-gallery">Gallery</button>
+      <button class="tb hot" id="open-compare">Compare</button>
+      <button class="icon-btn" id="open-about" aria-label="About" title="About"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>
+      <a class="icon-btn" href="https://github.com/Shamsiddin-X/spacecam" target="_blank" rel="noopener" aria-label="Code on GitHub" title="Code on GitHub"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg></a>
+    </nav>
+    <div class="load" id="load"><i></i></div>
+  </header>
+
+  <!-- выбранный сектор (режим «Earth») -->
+  <aside id="sector" class="panel" hidden>
+    <button class="x" id="sector-x" aria-label="Close">✕</button>
+    <span class="k">Sector</span>
+    <h2 id="sec-id">—</h2>
+    <p class="mono muted small" id="sec-range"></p>
+    <div class="compass" id="compass">
+      <button data-d="n"></button><button data-d="e"></button><span class="mono">←→↑↓</span><button data-d="w"></button><button data-d="s"></button>
+    </div>
+    <button class="btn wide" id="sec-open">Open sector in the sky</button>
+    <h4 id="sec-count">Objects</h4>
+    <ul id="sec-list" class="objlist"></ul>
+  </aside>
+
+  <!-- выбранный участок (режим «Sky») -->
+  <div id="field" class="fieldcard" hidden>
+    <div><span class="k" id="fc-kind">Field</span><b id="fc-name">—</b><span class="mono muted" id="fc-co"></span></div>
+    <button class="btn" id="fc-compare">Compare epochs</button>
+    <button class="tb" id="fc-center">Center</button>
+    <button class="x" id="fc-x" aria-label="Clear selection">✕</button>
+  </div>
+
+  <div id="inset" class="inset" hidden></div>
+  <div id="readout" class="readout mono"><span>Center <b id="r-center">—</b></span><span>FOV <b id="r-fov">—</b></span><span>Cursor <b id="r-hover">—</b></span></div>
+  <p id="hint" class="hint mono"></p>
+  <div id="try" class="try"><span class="mono">TRY</span><div class="try-list"></div><button id="tour-btn" class="try-tour">▶ Tour · 90 s</button></div>
+  <div id="tour" class="tour" hidden></div>
+  <div id="keys" class="keys" hidden>
+    <div class="keys-in"><span class="k">Keyboard</span><button class="x" id="keys-x" aria-label="Close">✕</button>
+      <dl>
+        <dt>/</dt><dd>Search</dd><dt>Enter</dt><dd>Fly into the selected sector</dd><dt>← → ↑ ↓</dt><dd>Neighbour sector · move field · step frames</dd><dt>Esc</dt><dd>Back</dd>
+        <dt>Space</dt><dd>Play / pause</dd><dt>D</dt><dd>Difference</dd><dt>M</dt><dd>Mark and track an object</dd><dt>G</dt><dd>RA/Dec grid</dd><dt>+ − 0</dt><dd>Zoom · reset</dd><dt>?</dt><dd>This list</dd>
+      </dl></div></div>
+
+  <section id="cmp" class="overlay" aria-label="Epoch comparison"></section>
+  <section id="gal" class="overlay" aria-label="Gallery"></section>
+
+  <div id="about" class="sheet" hidden>
+    <div class="sheet-in">
+      <button class="x" id="about-x" aria-label="Close">✕</button>
+      <span class="k">About</span>
+      <h2>SpaceCam</h2>
+      <div class="cols">
+        <div><h3>Sky around Earth</h3><p>Earth is lit by the real Sun and rotated to sidereal time. Around it is the whole sky from SPHEREx DR1. The grid splits it into 72 sectors A01–F12: click a sector to select it, double-click to fly into the sky.</p></div>
+        <div><h3>Images and wavelengths</h3><p>Our own HEALPix/HiPS engine streams tiles straight from NASA/IPAC IRSA and CDS: SPHEREx in 102 infrared channels, AllWISE, 2MASS, Pan-STARRS, DSS2.</p></div>
+        <div><h3>Compare</h3><p>One patch of sky over 40 years: DSS2 (1985–2000), 2MASS (1997–2001), AllWISE (2010), Pan-STARRS (2010–2014), SPHEREx (2025–2026) and individual SPHEREx visits. Blink, swipe, difference, animation of every image, and detection of what appeared, vanished or moved.</p></div>
+        <div><h3>Open data</h3><p>Every image links to its original in the archive. A GitHub Actions pipeline collects fresh SPHEREx visits for selected fields every week. The code is open (MIT).</p></div>
+      </div>
+      <div class="diag-box">
+        <h3>IRSA proxy</h3>
+        <p class="muted small">Archive access is configured automatically on the hosted site. You can optionally set your own HTTPS proxy here. Archive availability and image coverage vary.</p>
+        <div class="proxy-row"><input id="proxy-url" class="gal-q" placeholder="https://spacecam-proxy.you.workers.dev" /><button class="btn" id="proxy-save">Save</button></div>
+        <button class="btn" id="diag-run">Check connection to the archives</button><div id="diag-out"></div></div>
+      <p class="credits mono">Data: NASA/JPL-Caltech/IPAC · SPHEREx (IRSA) · CDS Strasbourg (HiPS) · NASA JPL SSD · NASA Visible Earth. Messier catalogue: Wikipedia.<br />This publication makes use of data products from the Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer (SPHEREx), which is a joint project of the Jet Propulsion Laboratory and the California Institute of Technology, and is funded by the National Aeronautics and Space Administration.</p>
+    </div>
+  </div>
+  <div id="toast" hidden></div>
+  </div>
+
+  <script src="js/safe.js"></script>
+  <script src="js/startup.js?v=20261115-loader"></script>
+  <script src="js/astro.js"></script>
+  <script src="js/catalog.js"></script>
+  <script src="js/sectors.js"></script>
+  <script src="js/healpix.js"></script>
+  <script src="js/shaders.js"></script>
+  <script src="js/hips.js?v=20261115-local-textures"></script>
+  <script src="js/scene.js?v=20261115-local-textures"></script>
+  <script src="js/detect.js"></script>
+  <script src="js/fits.js"></script>
+  <script src="js/irsa.js"></script>
+  <script src="js/hipscut.js"></script>
+  <script src="js/track.js"></script>
+  <script src="js/cmpview.js"></script>
+  <script src="js/compare.js"></script>
+  <script src="js/inset.js"></script>
+  <script src="js/tour.js"></script>
+  <script src="js/gallery.js"></script>
+  <script src="js/main.js?v=20261115-loader"></script>
+</body>
+</html>
